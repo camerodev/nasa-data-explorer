@@ -1,0 +1,18 @@
+# Node
+node_modules
+npm-debug.log*
+pnpm-lock.yaml
+yarn.lock
+
+# Builds
+frontend/dist
+backend/build
+
+# Env
+*.env
+frontend/.env
+backend/.env
+
+# OS/Editor
+.DS_Store
+Thumbs.db
