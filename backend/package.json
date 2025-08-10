@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "Backend API for NASA Mission Control challenge - Express proxy to NASA APIs",
+  "description": "Backend API for NASA Date Explorer challenge - Express proxy to NASA APIs",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
