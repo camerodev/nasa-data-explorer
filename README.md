@@ -1,4 +1,4 @@
-# NASA Data Explorer
+# NASA Mission Control
 A full-stack web application to explore data from NASA's public APIs, including Astronomy Picture of the Day (APOD), Mars Rover Photos, Near Earth Objects (NEO) data, and NASA Image/Video Library.
 ## Tech Stack
 ### Backend
