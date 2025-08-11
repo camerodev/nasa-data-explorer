@@ -1,6 +1,6 @@
-import { AppBar, Toolbar, Tabs, Tab, Container, Typography, Box } from '@mui/material'
-import { useLocation, useNavigate } from 'react-router-dom'
 import { useMemo } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { AppBar, Toolbar, Tabs, Tab, Container, Typography, Box } from '@mui/material'
 
 const routes = ['/apod', '/mars', '/neo', '/media']
 

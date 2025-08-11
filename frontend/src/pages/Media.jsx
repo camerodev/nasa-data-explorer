@@ -5,6 +5,7 @@ import {
   Box, TextField, Typography, Pagination, MenuItem,
   Card, CardMedia, CardContent, Skeleton, Alert, Stack
 } from '@mui/material'
+
 import Lightbox from '../components/Lightbox'
 import { qk } from '../api/keys'
 import { searchMedia } from '../api/nasa'
@@ -13,6 +14,7 @@ function pickItemThumb(item) {
   const href = item?.links?.find(l => l.rel !== 'captions')?.href
   return href || ''
 }
+
 function useDebounced(value, delay = 350) {
   const [debounced, setDebounced] = useState(value)
   useEffect(() => {
@@ -26,37 +28,51 @@ const PAGE_SIZE_OPTIONS = [25, 50, 75, 100]
 
 export default function Media() {
   const [sp, setSp] = useSearchParams()
+
   const [q, setQ] = useState(sp.get('q') || 'orion')
-  const [page, setPage] = useState(Number(sp.get('page') || 1))
-  const [pageSize, setPageSize] = useState(Number(sp.get('pageSize') || 50))
+  const [page, setPage] = useState(() => {
+    const n = Number(sp.get('page'))
+    return Number.isFinite(n) && n > 0 ? n : 1
+  })
+
+  const initialPageSize = (() => {
+    const raw = sp.get('pageSize')
+    const n = Number(raw)
+    return PAGE_SIZE_OPTIONS.includes(n) ? n : 50
+  })()
+  const [pageSize, setPageSize] = useState(initialPageSize)
+
   const debouncedQ = useDebounced(q)
 
   useEffect(() => {
     const next = new URLSearchParams()
-    if (debouncedQ) next.set('q', debouncedQ)
+    if (debouncedQ && debouncedQ.trim().length > 0) next.set('q', debouncedQ)
     next.set('page', String(page))
     next.set('pageSize', String(pageSize))
     setSp(next, { replace: true })
   }, [debouncedQ, page, pageSize, setSp])
 
   const search = useQuery({
-    queryKey: qk.media(debouncedQ, page),
-    queryFn: ({ signal }) => searchMedia({ q: debouncedQ, page }, { signal }),
+    queryKey: qk.media(debouncedQ, page, pageSize),
+    queryFn: ({ signal }) => searchMedia({ q: debouncedQ, page, pageSize }, { signal }),
     keepPreviousData: true,
-    enabled: !!debouncedQ?.trim()
+    enabled: !!debouncedQ && debouncedQ.trim().length > 0,
   })
 
-  const itemsRaw = useMemo(() => search.data?.collection?.items ?? [], [search.data])
+  const itemsRaw = useMemo(
+    () => search.data?.collection?.items ?? [],
+    [search.data]
+  )
   const total = useMemo(
     () => Number(search.data?.collection?.metadata?.total_hits ?? 0),
     [search.data]
   )
 
-  const items = useMemo(() => itemsRaw.slice(0, pageSize), [itemsRaw, pageSize])
+  const items = itemsRaw
 
-  const totalPages = Math.max(1, Math.ceil(total / 100))
-  const showingStart = (page - 1) * 100 + 1
-  const showingEnd = (page - 1) * 100 + items.length
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const showingStart = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const showingEnd = total === 0 ? 0 : (page - 1) * pageSize + items.length
 
   const [lbOpen, setLbOpen] = useState(false)
   const [lbIndex, setLbIndex] = useState(0)
@@ -64,8 +80,11 @@ export default function Media() {
     const data = it?.data?.[0]
     const title = data?.title || 'Untitled'
     const thumb = pickItemThumb(it)
-    return { src: thumb, title, subtitle: data?.date_created?.slice(0, 10), href: thumb }
+    const subtitle = data?.date_created ? data.date_created.slice(0, 10) : ''
+    return { src: thumb, title, subtitle, href: thumb }
   }), [items])
+
+  const showSkeleton = (search.isLoading && items.length === 0)
 
   return (
     <Box>
@@ -82,7 +101,7 @@ export default function Media() {
           select
           label="Items to show"
           value={pageSize}
-          onChange={(e) => setPageSize(Number(e.target.value))}
+          onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
           sx={{ width: { xs: '100%', sm: 180 } }}
           InputLabelProps={{ shrink: true }}
         >
@@ -90,9 +109,9 @@ export default function Media() {
         </TextField>
       </Stack>
 
-      {search.isLoading && (
+      {showSkeleton && (
         <Box sx={{ mt: 3, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 2 }}>
-          {Array.from({ length: Math.min(pageSize, 10) }).map((_, i) => (
+          {Array.from({ length: Math.min(pageSize, 12) }).map((_, i) => (
             <Card key={i}>
               <Skeleton variant="rectangular" height={160} />
               <CardContent>
@@ -109,7 +128,7 @@ export default function Media() {
         </Alert>
       )}
 
-      {!search.isLoading && !search.isError && itemsRaw.length === 0 && debouncedQ?.trim() && (
+      {!search.isLoading && !search.isError && items.length === 0 && debouncedQ?.trim() && (
         <Alert severity="info" sx={{ mt: 2 }}>
           No results for “{debouncedQ}”. Try a different query.
         </Alert>
@@ -138,17 +157,25 @@ export default function Media() {
             {items.map((it, idx) => {
               const data = it?.data?.[0]
               const title = data?.title || 'Untitled'
+              const key = data?.nasa_id ?? idx
               const thumb = pickItemThumb(it)
               return (
-                <Card key={idx} sx={{ overflow: 'hidden', bgcolor: 'background.paper', cursor: thumb ? 'zoom-in' : 'default' }}>
+                <Card
+                  key={key}
+                  sx={{ overflow: 'hidden', bgcolor: 'background.paper', cursor: thumb ? 'zoom-in' : 'default' }}
+                >
                   {thumb ? (
                     <CardMedia
                       component="img"
                       image={thumb}
                       alt={title}
                       loading="lazy"
-                      sx={{ aspectRatio: '16 / 10', objectFit: 'cover' }}
-                      onLoad={(e) => e.currentTarget.classList.add('loaded')}
+                      sx={{
+                        aspectRatio: '16 / 10',
+                        objectFit: 'cover',
+                        filter: 'none !important',
+                        transform: 'none !important'
+                      }}
                       onClick={() => { setLbIndex(idx); setLbOpen(true) }}
                     />
                   ) : (
