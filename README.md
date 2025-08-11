@@ -25,8 +25,13 @@ npm install
 ```
 - Create a .env file
 ```
+bash
+cp .env.example .env
+```
+You can get a free NASA API key from: https://api.nasa.gov/ and change the NASA_API_KEY with yours.
+```
 NASA_API_KEY=your_nasa_api_key
-PORT=5000
+PORT=4000
 ```
 - Start the backend:
 ```
@@ -39,7 +44,7 @@ npm install
 ```
 - Create a .env file
 ```
-VITE_API_BASE_URL=http://localhost:5000/api
+VITE_API_BASE_URL=http://localhost:4000/api
 ```
 - Start the frontend:
 ```
