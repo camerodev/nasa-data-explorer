@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://nasa-data-explorer-0uoq.onrender.com/api/$1" },
+    { "source": "/(.*)", "destination": "/" }
+  ]
+}
